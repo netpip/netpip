@@ -4,3 +4,4 @@ build/
 __pycache__/
 .env
 .pypirc
+.pytest_cache/
