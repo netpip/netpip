@@ -11,8 +11,9 @@ class Finding:
     rule_id: str
     level: str      # "DANGER", "WARNING", or "INFO"
     message: str
-    line: int       # line number in the EA file
+    line: int       # line number in the file
     weight: int     # weight used to calculate the risk score
+    file: str = ""  # which file the finding is in (set by the CLI)
 
 
 class Rule:

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import __version__
+from .includes import collect_sources
 from .report import format_report
 from .rules import ALL_RULES
 
@@ -23,12 +24,15 @@ def run_check(file_name: str) -> int:
     if not path.is_file():
         print(f"Error: file not found: {file_name}", file=sys.stderr)
         return 2
-    source = read_source(path)
+    sources, missing = collect_sources(path, read_source)
     findings = []
-    for rule_class in ALL_RULES:
-        findings.extend(rule_class().check(source))
-    findings.sort(key=lambda finding: finding.line)
-    print(format_report(path.name, findings))
+    for display_name, text in sources:
+        for rule_class in ALL_RULES:
+            for finding in rule_class().check(text):
+                finding.file = display_name
+                findings.append(finding)
+    findings.sort(key=lambda f: (f.file != path.name, f.file, f.line))
+    print(format_report(path.name, findings, missing, len(sources)))
     return 0
 
 
