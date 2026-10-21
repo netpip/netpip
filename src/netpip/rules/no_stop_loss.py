@@ -5,11 +5,21 @@ from typing import List
 
 from .base import Finding, Rule
 
-# Matches CTrade calls such as trade.Buy( ... ) or trade.Sell( ... )
+# Matches trade.Buy( ... ) and trade.Sell( ... )
 CALL = re.compile(r"\.(?:Buy|Sell)\s*\(")
 
 # Literal values that mean "no stop loss"
 ZERO_VALUES = {"0", "0.0", "0.00"}
+
+IDENT = re.compile(r"^\w+$")
+
+# Argument names that look like a stop loss or a take profit
+SL_NAME = re.compile(r"(?i:stop_?loss)|(?:^|[a-z_\d])(?:SL|sl)(?:[A-Z_\d]|$)")
+TP_NAME = re.compile(r"(?i:take_?profit)|(?:^|[a-z_\d])(?:TP|tp)(?:[A-Z_\d]|$)")
+
+# Position of the stop loss in the standard CTrade signature:
+# Buy(volume, symbol, price, sl, tp, comment)
+DEFAULT_SL_INDEX = 3
 
 
 def split_args(text: str) -> List[str]:
@@ -31,8 +41,19 @@ def split_args(text: str) -> List[str]:
     return args
 
 
+def stop_loss_index(args: List[str]) -> int:
+    """Work out which argument is the stop loss."""
+    for index, arg in enumerate(args):
+        if IDENT.match(arg) and SL_NAME.search(arg):
+            return index
+    for index, arg in enumerate(args):
+        if index > 0 and IDENT.match(arg) and TP_NAME.search(arg):
+            return index - 1
+    return DEFAULT_SL_INDEX
+
+
 class NoStopLossRule(Rule):
-    """Flags CTrade Buy/Sell calls where the stop loss argument is 0."""
+    """Flags Buy/Sell calls where the stop loss argument is a literal 0."""
 
     id = "NO_STOP_LOSS"
     level = "DANGER"
@@ -46,9 +67,9 @@ class NoStopLossRule(Rule):
             match = CALL.search(code)
             if not match:
                 continue
-            # CTrade signature: Buy(volume, symbol, price, sl, tp, comment)
             args = split_args(code[match.end():])
-            if len(args) >= 4 and args[3] in ZERO_VALUES:
+            index = stop_loss_index(args)
+            if index < len(args) and args[index] in ZERO_VALUES:
                 findings.append(
                     Finding(self.id, self.level, self.message, number, self.weight)
                 )
