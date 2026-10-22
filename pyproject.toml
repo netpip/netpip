@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netpip"
-version = "0.0.1"
-description = "CLI tool for checking and testing MT5 Expert Advisors (work in progress)."
+version = "0.1.0"
+description = "Command-line risk checks for MetaTrader 5 Expert Advisors."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "Apache-2.0"
